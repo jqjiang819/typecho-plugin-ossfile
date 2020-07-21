@@ -1,4 +1,7 @@
 <?php
+
+use OSS\Core\OssException;
+
 /**
  *  阿里云OSS上传插件（Typecho）
  *
@@ -9,19 +12,19 @@
  * @dependence 1.0-*
  * @date 2018-08-08
  */
-
-class OssForTypecho_Plugin implements Typecho_Plugin_Interface {
+class OssForTypecho_Plugin implements Typecho_Plugin_Interface
+{
     //上传文件目录
-    const UPLOAD_DIR = '/usr/uploads' ;
+    const UPLOAD_DIR = '/usr/uploads';
 
     /**
      * 激活插件方法,如果激活失败,直接抛出异常
      *
      * @access public
-     * @return void
-     * @throws Typecho_Plugin_Exception
+     * @return string
      */
-    public static function activate() {
+    public static function activate()
+    {
         Typecho_Plugin::factory('Widget_Upload')->uploadHandle = array('OssForTypecho_Plugin', 'uploadHandle');
         Typecho_Plugin::factory('Widget_Upload')->modifyHandle = array('OssForTypecho_Plugin', 'modifyHandle');
         Typecho_Plugin::factory('Widget_Upload')->deleteHandle = array('OssForTypecho_Plugin', 'deleteHandle');
@@ -35,10 +38,10 @@ class OssForTypecho_Plugin implements Typecho_Plugin_Interface {
      *
      * @static
      * @access public
-     * @return void
-     * @throws Typecho_Plugin_Exception
+     * @return string
      */
-    public static function deactivate(){
+    public static function deactivate()
+    {
         return _t('插件已禁用');
     }
 
@@ -49,7 +52,8 @@ class OssForTypecho_Plugin implements Typecho_Plugin_Interface {
      * @param Typecho_Widget_Helper_Form $form 配置面板
      * @return void
      */
-    public static function config(Typecho_Widget_Helper_Form $form) {
+    public static function config(Typecho_Widget_Helper_Form $form)
+    {
         $desc = new Typecho_Widget_Helper_Form_Element_Text('desc', NULL, '', _t('插件使用说明：'),
             _t('<ol>
                       <li>插件基于阿里云aliyun-oss-php-sdk开发，若发现插件不可用，请到本插件 <a target="_blank" href="https://github.com/CharmeRyl/typecho-plugin-ossfile">GitHub发布地址</a> 检查是否有更新，或者提交Issues。<br></li>
@@ -112,7 +116,9 @@ class OssForTypecho_Plugin implements Typecho_Plugin_Interface {
      * @param Typecho_Widget_Helper_Form $form
      * @return void
      */
-    public static function personalConfig(Typecho_Widget_Helper_Form $form) { }
+    public static function personalConfig(Typecho_Widget_Helper_Form $form)
+    {
+    }
 
     /**
      * 上传文件处理函数
@@ -120,8 +126,11 @@ class OssForTypecho_Plugin implements Typecho_Plugin_Interface {
      * @access public
      * @param array $file 上传的文件
      * @return mixed
+     * @throws OssException
+     * @throws Typecho_Exception
      */
-    public static function uploadHandle($file) {
+    public static function uploadHandle($file)
+    {
         if (empty($file['name'])) {
             return false;
         }
@@ -149,13 +158,17 @@ class OssForTypecho_Plugin implements Typecho_Plugin_Interface {
         //初始化OSS
         $ossClient = self::OssInit();
         try {
-            $result = $ossClient->uploadFile($options->bucket, substr($path,1), $uploadfile);
+            if (isset($file['tmp_name'])) {
+                $result = $ossClient->uploadFile($options->bucket, substr($path, 1), $uploadfile);
+            } else {
+                // byte流方式上传
+                $result = $ossClient->putObject($options->bucket, substr($path, 1), $uploadfile);
+            }
         } catch (Exception $e) {
-            print_r($e);
             return false;
         }
 
-        if (!isset($file['size'])){
+        if (!isset($file['size'])) {
             $fileInfo = $result['info'];
             $file['size'] = $fileInfo['size_upload'];
         }
@@ -166,7 +179,7 @@ class OssForTypecho_Plugin implements Typecho_Plugin_Interface {
             'path' => $path,
             'size' => $file['size'],
             'type' => $ext,
-            'mime' => @Typecho_Common::mimeContentType($path)
+            'mime' => (isset($file['mime']) ? $file['mime'] : @Typecho_Common::mimeContentType($path))
         );
     }
 
@@ -177,8 +190,11 @@ class OssForTypecho_Plugin implements Typecho_Plugin_Interface {
      * @param array $content 老文件
      * @param array $file 新上传的文件
      * @return mixed
+     * @throws OssException
+     * @throws Typecho_Exception
      */
-    public static function modifyHandle($content, $file) {
+    public static function modifyHandle($content, $file)
+    {
         if (empty($file['name'])) {
             return false;
         }
@@ -204,12 +220,12 @@ class OssForTypecho_Plugin implements Typecho_Plugin_Interface {
         //初始化OSS
         $ossClient = self::OssInit();
         try {
-            $result = $ossClient->uploadFile($options->bucket, substr($path,1), $uploadfile);
+            $result = $ossClient->uploadFile($options->bucket, substr($path, 1), $uploadfile);
         } catch (Exception $e) {
             return false;
         }
 
-        if (!isset($file['size'])){
+        if (!isset($file['size'])) {
             $fileInfo = $result['info'];
             $file['size'] = $fileInfo['size_upload'];
         }
@@ -230,8 +246,11 @@ class OssForTypecho_Plugin implements Typecho_Plugin_Interface {
      * @access public
      * @param array $content 文件相关信息
      * @return string
+     * @throws OssException
+     * @throws Typecho_Exception
      */
-    public static function deleteHandle(array $content) {
+    public static function deleteHandle(array $content)
+    {
         //获取设置参数
         $options = Typecho_Widget::widget('Widget_Options')->plugin('OssForTypecho');
         //初始化COS
@@ -250,8 +269,10 @@ class OssForTypecho_Plugin implements Typecho_Plugin_Interface {
      * @access public
      * @param array $content 文件相关信息
      * @return string
+     * @throws Typecho_Exception
      */
-    public static function attachmentHandle(array $content) {
+    public static function attachmentHandle(array $content)
+    {
         //获取设置参数
         $options = Typecho_Widget::widget('Widget_Options')->plugin('OssForTypecho');
         return Typecho_Common::url($content['attachment']->path, self::getDomain());
@@ -263,12 +284,15 @@ class OssForTypecho_Plugin implements Typecho_Plugin_Interface {
      * @access public
      * @param array $content
      * @return string
+     * @throws Typecho_Exception
+     * @throws OssException
      */
-    public static function attachmentDataHandle($content) {
+    public static function attachmentDataHandle($content)
+    {
         //获取设置参数
         $options = Typecho_Widget::widget('Widget_Options')->plugin('OssForTypecho');
         $ossClient = self::OssInit();
-        return $ossClient->getObjectMeta($options->bucket, substr($content['attachment']->path,1));
+        return $ossClient->getObjectMeta($options->bucket, substr($content['attachment']->path, 1));
     }
 
     /**
@@ -276,8 +300,11 @@ class OssForTypecho_Plugin implements Typecho_Plugin_Interface {
      *
      * @access public
      * @return object
+     * @throws Typecho_Exception
+     * @throws OssException
      */
-    public static function OssInit() {
+    public static function OssInit()
+    {
         $options = Typecho_Widget::widget('Widget_Options')->plugin('OssForTypecho');
         $endpoint = 'https://' . $options->region . $options->suffix;
         require_once 'aliyun-oss-php-sdk-2.3.0.phar';
@@ -289,12 +316,11 @@ class OssForTypecho_Plugin implements Typecho_Plugin_Interface {
      * @access private
      * @return string
      */
-    private static function getUploadDir() {
-        if(defined('__TYPECHO_UPLOAD_DIR__'))
-        {
+    private static function getUploadDir()
+    {
+        if (defined('__TYPECHO_UPLOAD_DIR__')) {
             return __TYPECHO_UPLOAD_DIR__;
-        }
-        else{
+        } else {
             return self::UPLOAD_DIR;
         }
     }
@@ -306,7 +332,8 @@ class OssForTypecho_Plugin implements Typecho_Plugin_Interface {
      * @access private
      * @return string
      */
-    private static function getUploadFile($file) {
+    private static function getUploadFile($file)
+    {
         return isset($file['tmp_name']) ? $file['tmp_name'] : (isset($file['bytes']) ? $file['bytes'] : (isset($file['bits']) ? $file['bits'] : ''));
     }
 
@@ -314,11 +341,13 @@ class OssForTypecho_Plugin implements Typecho_Plugin_Interface {
      *获取文件上传目录
      * @access private
      * @return string
+     * @throws Typecho_Exception
      */
-    private static function getDomain() {
+    private static function getDomain()
+    {
         $options = Typecho_Widget::widget('Widget_Options')->plugin('OssForTypecho');
         $domain = $options->domain;
-        if(empty($domain))  $domain = 'https://' . $options->bucket . '.' . $options->region . '.aliyuncs.com';
+        if (empty($domain)) $domain = 'https://' . $options->bucket . '.' . $options->region . '.aliyuncs.com';
         return $domain;
     }
 
@@ -330,7 +359,8 @@ class OssForTypecho_Plugin implements Typecho_Plugin_Interface {
      * @access private
      * @return string
      */
-    private static function getSafeName(&$name) {
+    private static function getSafeName($name)
+    {
         $name = str_replace(array('"', '<', '>'), '', $name);
         $name = str_replace('\\', '/', $name);
         $name = false === strpos($name, '/') ? ('a' . $name) : str_replace('/', '/a', $name);
