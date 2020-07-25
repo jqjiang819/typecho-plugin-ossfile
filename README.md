@@ -14,9 +14,11 @@ OssForTypecho是基于Typecho的一个支持文件附件上传、修改和删除
 3. 插件不会验证配置的正确性，请自行确认配置信息正确，否则不能正常使用。
 
 ## 更新日志
-
+- **2020-07-25：** 升级OSS-PHP-SDK，支持流上传 ，[dragonflylee](https://github.com/dragonflylee) and [权那他](https://github.com/kraity)
 - **2018-08-08：** 升级OSS-PHP-SDK，使用phar包
 - **2018-04-05：** 首次发布，支持Typecho 1.x版本
+
+原作者: [Charmeryl](https://github.com/jqjiang819)
 
 ## 开源许可
 	The MIT License (MIT)
