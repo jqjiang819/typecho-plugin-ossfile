@@ -70,9 +70,9 @@ class OssForTypecho_Plugin implements Typecho_Plugin_Interface {
         $form->addInput($ackey->addRule('required', _t('AccessKey不能为空！')));
 
         $region = new Typecho_Widget_Helper_Form_Element_Select('region',
-            array('oss-cn-hangzhou' => '华东 1', 'oss-cn-shanghai' => '华东 2', 'oss-cn-qingdao' => '华北 1',
-                'oss-cn-beijing' => '华北 2', 'oss-cn-zhangjiakou' => '华北 3', 'oss-cn-huhehaote' => '华北 5',
-                'oss-cn-shenzhen' => '华南 1', 'oss-cn-hongkong' => '香港', 'oss-us-west-1' => '美国西部 1 （硅谷）',
+            array('oss-cn-hangzhou' => '华东 1 （杭州）', 'oss-cn-shanghai' => '华东 2 （上海）', 'oss-cn-qingdao' => '华北 1 （青岛）',
+                'oss-cn-beijing' => '华北 2 （北京）', 'oss-cn-zhangjiakou' => '华北 3 （张家口）', 'oss-cn-huhehaote' => '华北 5 （呼和浩特）',
+                'oss-cn-shenzhen' => '华南 1 （深圳）', 'oss-cn-hongkong' => '香港', 'oss-us-west-1' => '美国西部 1 （硅谷）',
                 'oss-us-east-1' => '美国东部 1 （弗吉尼亚）', 'oss-ap-southeast-1' => '亚太东南 1 （新加坡）',
                 'oss-ap-southeast-2' => '亚太东南 2 （悉尼）', 'oss-ap-southeast-3' => '亚太东南 3 （吉隆坡）',
                 'oss-ap-southeast-5' => '亚太东南 5 （雅加达）', 'oss-ap-northeast-1' => '亚太东北 1 （日本）',
@@ -279,8 +279,8 @@ class OssForTypecho_Plugin implements Typecho_Plugin_Interface {
      */
     public static function OssInit() {
         $options = Typecho_Widget::widget('Widget_Options')->plugin('OssForTypecho');
-        $endpoint = 'https://' . $options->region . $options->suffix;
-        require_once 'aliyun-oss-php-sdk-2.3.0.phar';
+        $endpoint = $options->region . $options->suffix;
+        require_once 'aliyun-oss-php-sdk-2.3.1.phar';
         return new OSS\OssClient($options->acid, $options->ackey, $endpoint);
     }
 
